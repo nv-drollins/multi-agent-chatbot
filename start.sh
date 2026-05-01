@@ -22,7 +22,7 @@ export EMBED_MODEL="${EMBED_MODEL:-nomic-embed-text}"
 export PORT="${PORT:-7860}"
 export PUBLIC_BASE_URL="${PUBLIC_BASE_URL:-http://$(hostname -I | awk '{print $1}'):${PORT}}"
 
-mkdir -p .run data/frames data/generated data/index data/uploads data/videos reports
+mkdir -p .run data/frames data/generated data/index data/uploads data/videos
 
 if ! curl -fsS "${OLLAMA_URL}/api/tags" >/dev/null 2>&1; then
   echo "Starting demo-scoped Ollama on GPU ${CUDA_VISIBLE_DEVICES} at ${OLLAMA_HOST}"

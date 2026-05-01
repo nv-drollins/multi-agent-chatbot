@@ -5,8 +5,6 @@ __pycache__/
 
 # Runtime demo state
 data/
-reports/
-demo-workspace/
 
 # Local/editor noise
 .DS_Store

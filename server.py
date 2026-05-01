@@ -21,18 +21,14 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 
 ROOT = pathlib.Path(__file__).resolve().parent
 STATIC_DIR = ROOT / "static"
-TEMPLATE_DIR = ROOT / "templates"
 DATA_DIR = ROOT / "data"
 IMAGE_DIR = DATA_DIR / "images"
 VIDEO_DIR = DATA_DIR / "videos"
 UPLOAD_DIR = DATA_DIR / "uploads"
 GENERATION_DIR = DATA_DIR / "generated"
-REPORT_DIR = ROOT / "reports"
 DOC_INDEX = DATA_DIR / "index" / "docs.json"
 EVENTS_PATH = DATA_DIR / "events.json"
 STATE_PATH = DATA_DIR / "state.json"
-WORKSPACE_DIR = ROOT / "demo-workspace"
-CODE_DIR = WORKSPACE_DIR / "shopflow"
 
 INVENTORY_BUCKETS = {
     "images": {
@@ -68,177 +64,6 @@ VISION_PROVIDER = os.environ.get("VISION_PROVIDER", "cosmos").lower()
 COSMOS_NIM_BASE = os.environ.get("COSMOS_NIM_BASE", "http://127.0.0.1:8000/v1").rstrip("/")
 COSMOS_MODEL = os.environ.get("COSMOS_MODEL", "nvidia/cosmos-reason2-2b")
 PUBLIC_BASE_URL = os.environ.get("PUBLIC_BASE_URL", "http://127.0.0.1:7860").rstrip("/")
-
-GAME_VARIANTS = [
-    {
-        "title": "Neon Paddle Arena",
-        "status": "Power-ups active",
-        "accent": "#76b900",
-        "accent_light": "#b7f34a",
-        "secondary": "#5ed7c7",
-        "power": "#f0b84d",
-        "field": "#151812",
-        "body": "#0f120f",
-        "grid": "#30382b",
-        "border": "#3d4638",
-        "panel": "#1a1e18",
-        "star_count": 80,
-        "paddle_height": 126,
-        "wide_height": 170,
-        "ai_speed": 4.9,
-        "powerup_rate": 0.006,
-        "max_powerups": 2,
-        "grid_step": 64,
-        "win_score": 7,
-        "ball_min": 6.8,
-        "ball_max": 8.4,
-        "start_text": "Click or press Space",
-    },
-    {
-        "title": "Circuit Breaker Rally",
-        "status": "Charge nodes online",
-        "accent": "#8bd80a",
-        "accent_light": "#d5ff66",
-        "secondary": "#72a7ff",
-        "power": "#ffd166",
-        "field": "#111719",
-        "body": "#0c1012",
-        "grid": "#2e4143",
-        "border": "#41575a",
-        "panel": "#172022",
-        "star_count": 55,
-        "paddle_height": 112,
-        "wide_height": 160,
-        "ai_speed": 5.7,
-        "powerup_rate": 0.011,
-        "max_powerups": 3,
-        "grid_step": 48,
-        "win_score": 9,
-        "ball_min": 7.6,
-        "ball_max": 9.4,
-        "start_text": "Click to energize grid",
-    },
-    {
-        "title": "Tensor Drift Duel",
-        "status": "Boost lanes armed",
-        "accent": "#65d46e",
-        "accent_light": "#b6ff8a",
-        "secondary": "#84d5ff",
-        "power": "#ffb45c",
-        "field": "#14151b",
-        "body": "#0d0f14",
-        "grid": "#353847",
-        "border": "#454b5e",
-        "panel": "#1a1c25",
-        "star_count": 115,
-        "paddle_height": 142,
-        "wide_height": 188,
-        "ai_speed": 4.1,
-        "powerup_rate": 0.004,
-        "max_powerups": 2,
-        "grid_step": 80,
-        "win_score": 6,
-        "ball_min": 6.1,
-        "ball_max": 7.6,
-        "start_text": "Press Space to drift",
-    },
-    {
-        "title": "Warehouse Pulse Pong",
-        "status": "Autonomous pickups live",
-        "accent": "#76c043",
-        "accent_light": "#c6f56a",
-        "secondary": "#57d0b0",
-        "power": "#f7c948",
-        "field": "#121812",
-        "body": "#0d110d",
-        "grid": "#31402f",
-        "border": "#44513e",
-        "panel": "#171f16",
-        "star_count": 70,
-        "paddle_height": 98,
-        "wide_height": 150,
-        "ai_speed": 6.2,
-        "powerup_rate": 0.014,
-        "max_powerups": 4,
-        "grid_step": 56,
-        "win_score": 8,
-        "ball_min": 7.2,
-        "ball_max": 10.2,
-        "start_text": "Click to start pickup run",
-    },
-]
-
-SAMPLE_FILES = {
-    "README.md": """# ShopFlow Checkout Service
-
-ShopFlow is a tiny local repo for the coding agent. One test intentionally fails
-because regional inventory is cached by SKU only.
-""",
-    "app/__init__.py": "",
-    "app/inventory.py": """class DemoInventory:
-    def __init__(self, units_by_region):
-        self.units_by_region = dict(units_by_region)
-
-    def available(self, sku, region):
-        return self.units_by_region.get((sku, region), 0)
-""",
-    "app/checkout.py": """_INVENTORY_CACHE = {}
-
-
-def availability_cache_key(sku, region):
-    # BUG: region-specific inventory is being cached by SKU only.
-    return sku
-
-
-def available_units(inventory, sku, region):
-    key = availability_cache_key(sku, region)
-    if key not in _INVENTORY_CACHE:
-        _INVENTORY_CACHE[key] = inventory.available(sku, region)
-    return _INVENTORY_CACHE[key]
-
-
-def reserve_cart(cart, region, inventory):
-    for item in cart:
-        if available_units(inventory, item["sku"], region) < item["qty"]:
-            return {"status": "rejected", "reason": "insufficient regional inventory"}
-    return {"status": "reserved", "region": region, "items": len(cart)}
-""",
-    "tests/test_checkout.py": """import unittest
-
-from app.checkout import _INVENTORY_CACHE, reserve_cart
-from app.inventory import DemoInventory
-
-
-class CheckoutTests(unittest.TestCase):
-    def setUp(self):
-        _INVENTORY_CACHE.clear()
-
-    def test_region_specific_inventory_cache(self):
-        inventory = DemoInventory({
-            ("rtx-pro-devkit", "us-west"): 0,
-            ("rtx-pro-devkit", "us-east"): 3,
-        })
-        cart = [{"sku": "rtx-pro-devkit", "qty": 1}]
-
-        west = reserve_cart(cart, "us-west", inventory)
-        east = reserve_cart(cart, "us-east", inventory)
-
-        self.assertEqual(west["status"], "rejected")
-        self.assertEqual(east["status"], "reserved")
-
-
-if __name__ == "__main__":
-    unittest.main()
-""",
-    "docs/architecture.md": """# Architecture Note
-
-Inventory availability is region-specific. Cache keys for availability must
-include both `sku` and `region`.
-""",
-    "logs/checkout.log": """2026-04-30T09:02:44-04:00 WARN cache_hit sku=rtx-pro-devkit region=us-east cached_units=0
-2026-04-30T09:02:44-04:00 ERROR reservation_rejected region=us-east source_inventory_units=3
-""",
-}
 
 
 def now_iso():
@@ -301,14 +126,6 @@ def reset_state():
 
 def trace(agent, tool, detail, status="ok"):
     return {"agent": agent, "tool": tool, "detail": detail, "status": status, "ts": now_iso()}
-
-
-def ensure_workspace(overwrite=False):
-    for rel, content in SAMPLE_FILES.items():
-        path = CODE_DIR / rel
-        if overwrite or not path.exists():
-            path.parent.mkdir(parents=True, exist_ok=True)
-            path.write_text(content, encoding="utf-8")
 
 
 def http_json(url, payload, timeout=180):
@@ -565,49 +382,10 @@ def retrieve_uploaded_docs(query, limit=5):
     ]
 
 
-def workspace_sources(query, limit=6):
-    ensure_workspace()
-    scored = []
-    for path in CODE_DIR.rglob("*"):
-        if path.is_file() and path.suffix in {".py", ".md", ".log"}:
-            rel = path.relative_to(CODE_DIR).as_posix()
-            text = path.read_text(encoding="utf-8", errors="replace")
-            scored.append((keyword_score(query, rel + "\n" + text), rel, text[:1400]))
-    scored.sort(key=lambda row: row[0], reverse=True)
-    return [
-        {"source": rel, "kind": "workspace", "score": round(score, 4), "text": text}
-        for score, rel, text in scored[:limit]
-        if score > 0
-    ]
-
-
-def run_tests():
-    ensure_workspace()
-    return {
-        "command": "python3 -m unittest discover -s tests -v",
-        **run_cmd(["python3", "-m", "unittest", "discover", "-s", "tests", "-v"], cwd=CODE_DIR, timeout=30),
-    }
-
-
-def code_patch():
-    ensure_workspace()
-    path = CODE_DIR / "app" / "checkout.py"
-    text = path.read_text(encoding="utf-8")
-    new_text = text.replace(
-        '    # BUG: region-specific inventory is being cached by SKU only.\n    return sku\n',
-        '    return f"{sku}:{region}"\n',
-    )
-    changed = new_text != text
-    if changed:
-        path.write_text(new_text, encoding="utf-8")
-    return changed
-
-
 def reset_demo():
-    ensure_workspace(overwrite=True)
     reset_events()
     reset_state()
-    event("Supervisor", "Reset", "Restored demo repo and cleared trace.")
+    event("Supervisor", "Reset", "Cleared uploaded context and trace.")
     return {"ok": True, "events": events(), "active_role": "supervisor", "active_model": SUPERVISOR_MODEL}
 
 
@@ -1132,363 +910,6 @@ Uploaded document excerpts:
     }
 
 
-def coding_agent(apply=True):
-    before = run_tests()
-    sources = workspace_sources("checkout cache region inventory failing test architecture logs", limit=6)
-    patch_text = """--- a/app/checkout.py
-+++ b/app/checkout.py
-@@
- def availability_cache_key(sku, region):
--    # BUG: region-specific inventory is being cached by SKU only.
--    return sku
-+    return f"{sku}:{region}"
-"""
-    changed = code_patch() if apply else False
-    after = run_tests() if apply else None
-    prompt = f"""
-You are Coding Agent, part of a local multi-agent demo. Explain the result in under 120 words.
-Use English only. Mention the failing test, root cause, patch, and validation status.
-
-Initial test output:
-{before['output']}
-
-Patch:
-{patch_text}
-
-After test output:
-{after['output'] if after else 'Patch proposed only.'}
-
-Evidence:
-{json.dumps(sources, indent=2)}
-"""
-    answer = ollama_chat(CODING_MODEL, [{"role": "user", "content": prompt}], temperature=0.1, timeout=180)
-    steps = [
-        trace("Supervisor", "mcp.router.route", "Routed request to Coding Agent"),
-        trace("Coding Agent", "mcp.filesystem.search", "app/checkout.py, tests/test_checkout.py, docs/architecture.md"),
-        trace("Coding Agent", "mcp.test.run", f"before exit={before['exit_code']}"),
-        trace("Coding Agent", "mcp.filesystem.patch", "app/checkout.py" if changed else "patch proposal only"),
-    ]
-    if after:
-        steps.append(trace("Coding Agent", "mcp.test.run", f"after exit={after['exit_code']}"))
-    event("Coding Agent", "Code workflow completed", f"before={before['exit_code']} after={after['exit_code'] if after else 'n/a'}")
-    return {
-        "answer": answer,
-        "steps": steps,
-        "tests_before": before,
-        "tests_after": after,
-        "patch": patch_text,
-        "sources": sources,
-        "gpu": gpu_stats(),
-    }
-
-
-def slugify(value, default="agent-built-app"):
-    slug = re.sub(r"[^a-z0-9]+", "-", (value or "").lower()).strip("-")
-    return (slug[:48] or default).strip("-")
-
-
-def generated_html_is_offline(html):
-    blocked = [
-        r"https?://",
-        r"<script[^>]+src=",
-        r"<link[^>]+href=",
-        r"\bfetch\s*\(",
-        r"XMLHttpRequest",
-        r"\bimport\s*\(",
-    ]
-    return not any(re.search(pattern, html, re.IGNORECASE) for pattern in blocked)
-
-
-def is_game_prompt(prompt):
-    tokens = set(re.findall(r"[a-z0-9]+", (prompt or "").lower()))
-    return bool(
-        tokens
-        & {
-            "game",
-            "pong",
-            "mario",
-            "platformer",
-            "arcade",
-            "shooter",
-            "racing",
-            "snake",
-            "breakout",
-            "runner",
-            "playable",
-        }
-    )
-
-
-def generated_html_is_rich_enough(html, prompt):
-    if not generated_html_is_offline(html):
-        return False
-    if not is_game_prompt(prompt):
-        return True
-    lower = html.lower()
-    return len(html) >= 9000 and "<canvas" in lower and "requestanimationframe" in lower
-
-
-def extract_html(raw):
-    text = (raw or "").strip()
-    fenced = re.search(r"```(?:html)?\s*(.*?)```", text, re.IGNORECASE | re.DOTALL)
-    if fenced:
-        text = fenced.group(1).strip()
-    start = text.lower().find("<!doctype")
-    if start < 0:
-        start = text.lower().find("<html")
-    if start > 0:
-        text = text[start:].strip()
-    end = text.lower().rfind("</html>")
-    if end >= 0:
-        text = text[: end + len("</html>")].strip()
-    if "<html" not in text.lower() or "</html>" not in text.lower():
-        return None
-    if not generated_html_is_offline(text):
-        return None
-    return text
-
-
-def pick_game_variant():
-    current = state()
-    index = int(current.get("game_variant_index", -1)) + 1
-    update_state(game_variant_index=index)
-    return GAME_VARIANTS[index % len(GAME_VARIANTS)]
-
-
-def extract_design_title(design_brief):
-    for line in (design_brief or "").splitlines():
-        if "title" not in line.lower():
-            continue
-        candidate = re.sub(r"^[\s*\-\d.)]+", "", line)
-        candidate = re.sub(r"(?i)^title\s*[:\-]\s*", "", candidate)
-        candidate = re.sub(r"[*_`\"']", "", candidate).strip()
-        if 3 <= len(candidate) <= 48:
-            return candidate
-    return ""
-
-
-def apply_game_variant(html, variant, prompt, design_brief=""):
-    safe_prompt = re.sub(r"\s+", " ", prompt or "Pong").strip()[:120]
-    design_title = extract_design_title(design_brief)
-    subtitle = safe_prompt
-    if design_title:
-        subtitle = f"{design_title}: {safe_prompt}"[:150]
-    replacements = {
-        "__PROMPT__": html_lib.escape(subtitle),
-        "Neon Paddle Arena": html_lib.escape(variant["title"]),
-        "Power-ups active": html_lib.escape(variant["status"]),
-        "#76b900": variant["accent"],
-        "#b7f34a": variant["accent_light"],
-        "#5ed7c7": variant["secondary"],
-        "#f0b84d": variant["power"],
-        "#151812": variant["field"],
-        "#0f120f": variant["body"],
-        "#30382b": variant["grid"],
-        "#3d4638": variant["border"],
-        "#1a1e18": variant["panel"],
-        "__STAR_COUNT__": str(variant["star_count"]),
-        "__PADDLE_HEIGHT__": str(variant["paddle_height"]),
-        "__WIDE_HEIGHT__": str(variant["wide_height"]),
-        "__AI_SPEED__": str(variant["ai_speed"]),
-        "__POWERUP_RATE__": str(variant["powerup_rate"]),
-        "__MAX_POWERUPS__": str(variant["max_powerups"]),
-        "__GRID_STEP__": str(variant["grid_step"]),
-        "__WIN_SCORE__": str(variant["win_score"]),
-        "__BALL_MIN_SPEED__": str(variant["ball_min"]),
-        "__BALL_MAX_SPEED__": str(variant["ball_max"]),
-        "__START_TEXT__": json.dumps(variant["start_text"])[1:-1],
-    }
-    for old, new in replacements.items():
-        html = html.replace(old, new)
-    return html
-
-
-def fallback_game_html(prompt, design_brief=""):
-    template = TEMPLATE_DIR / "neon_paddle_arena.html"
-    variant = pick_game_variant()
-    title = "Agent Arcade"
-    safe_prompt = re.sub(r"\s+", " ", prompt or "Pong").strip()[:120]
-    if template.exists():
-        return apply_game_variant(template.read_text(encoding="utf-8"), variant, prompt, design_brief)
-    return f"""<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{title}</title>
-  <style>
-    * {{ box-sizing: border-box; }}
-    body {{
-      margin: 0;
-      min-height: 100vh;
-      display: grid;
-      place-items: center;
-      background: #10120f;
-      color: #f2f5ee;
-      font-family: Segoe UI, system-ui, sans-serif;
-    }}
-    main {{
-      width: min(960px, 96vw);
-      display: grid;
-      gap: 12px;
-    }}
-    header {{
-      display: flex;
-      justify-content: space-between;
-      align-items: end;
-      gap: 16px;
-    }}
-    h1 {{ margin: 0; font-size: 24px; }}
-    p {{ margin: 0; color: #aeb8a8; }}
-    canvas {{
-      width: 100%;
-      aspect-ratio: 16 / 9;
-      background: #151812;
-      border: 1px solid #3d4638;
-      border-radius: 8px;
-      box-shadow: 0 18px 50px rgba(0,0,0,.35);
-    }}
-    .hud {{
-      display: flex;
-      justify-content: space-between;
-      gap: 10px;
-      color: #aeb8a8;
-      font-size: 14px;
-    }}
-    button {{
-      border: 1px solid #76b900;
-      background: #76b900;
-      color: #10140d;
-      border-radius: 6px;
-      padding: 8px 12px;
-      font: inherit;
-      font-weight: 700;
-      cursor: pointer;
-    }}
-  </style>
-</head>
-<body>
-  <main>
-    <header>
-      <div>
-        <h1>Agent Arcade: Local Pong</h1>
-        <p>{html_lib.escape(safe_prompt)}</p>
-      </div>
-      <button id="restart">Restart</button>
-    </header>
-    <canvas id="game" width="960" height="540"></canvas>
-    <div class="hud">
-      <span>W/S or mouse controls the left paddle</span>
-      <span id="score">0 : 0</span>
-      <span>First to 7 wins</span>
-    </div>
-  </main>
-  <script>
-    const canvas = document.getElementById("game");
-    const ctx = canvas.getContext("2d");
-    const score = document.getElementById("score");
-    const state = {{
-      player: {{ x: 34, y: 220, w: 14, h: 94, vy: 0 }},
-      ai: {{ x: 912, y: 220, w: 14, h: 94 }},
-      ball: {{ x: 480, y: 270, r: 9, vx: 6, vy: 3.4 }},
-      left: 0,
-      right: 0,
-      running: true
-    }};
-    function resetBall(dir = 1) {{
-      state.ball.x = 480;
-      state.ball.y = 270;
-      state.ball.vx = 6 * dir;
-      state.ball.vy = (Math.random() * 4 - 2) || 2.4;
-    }}
-    function restart() {{
-      state.left = 0;
-      state.right = 0;
-      state.running = true;
-      state.player.y = 220;
-      state.ai.y = 220;
-      resetBall(Math.random() > .5 ? 1 : -1);
-    }}
-    function clamp(v, min, max) {{ return Math.max(min, Math.min(max, v)); }}
-    function drawRect(obj, color) {{
-      ctx.fillStyle = color;
-      ctx.fillRect(obj.x, obj.y, obj.w, obj.h);
-    }}
-    function step() {{
-      if (state.running) {{
-        state.player.y = clamp(state.player.y + state.player.vy, 0, canvas.height - state.player.h);
-        const target = state.ball.y - state.ai.h / 2;
-        state.ai.y += clamp(target - state.ai.y, -4.5, 4.5);
-        state.ai.y = clamp(state.ai.y, 0, canvas.height - state.ai.h);
-        state.ball.x += state.ball.vx;
-        state.ball.y += state.ball.vy;
-        if (state.ball.y < state.ball.r || state.ball.y > canvas.height - state.ball.r) {{
-          state.ball.vy *= -1;
-        }}
-        for (const paddle of [state.player, state.ai]) {{
-          const hit = state.ball.x + state.ball.r > paddle.x &&
-            state.ball.x - state.ball.r < paddle.x + paddle.w &&
-            state.ball.y + state.ball.r > paddle.y &&
-            state.ball.y - state.ball.r < paddle.y + paddle.h;
-          if (hit) {{
-            state.ball.vx *= -1.08;
-            const offset = (state.ball.y - (paddle.y + paddle.h / 2)) / (paddle.h / 2);
-            state.ball.vy = offset * 6;
-            state.ball.x += state.ball.vx > 0 ? 8 : -8;
-          }}
-        }}
-        if (state.ball.x < -20) {{ state.right++; resetBall(1); }}
-        if (state.ball.x > canvas.width + 20) {{ state.left++; resetBall(-1); }}
-        if (state.left >= 7 || state.right >= 7) state.running = false;
-      }}
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "#1a1e18";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = "#3d4638";
-      ctx.setLineDash([10, 12]);
-      ctx.beginPath();
-      ctx.moveTo(canvas.width / 2, 0);
-      ctx.lineTo(canvas.width / 2, canvas.height);
-      ctx.stroke();
-      ctx.setLineDash([]);
-      drawRect(state.player, "#76b900");
-      drawRect(state.ai, "#5ed7c7");
-      ctx.fillStyle = "#f2f5ee";
-      ctx.beginPath();
-      ctx.arc(state.ball.x, state.ball.y, state.ball.r, 0, Math.PI * 2);
-      ctx.fill();
-      score.textContent = `${{state.left}} : ${{state.right}}`;
-      if (!state.running) {{
-        ctx.fillStyle = "#f2f5ee";
-        ctx.font = "700 36px Segoe UI, system-ui";
-        ctx.textAlign = "center";
-        ctx.fillText(state.left > state.right ? "You win" : "AI wins", 480, 260);
-        ctx.font = "18px Segoe UI, system-ui";
-        ctx.fillText("Click Restart to play again", 480, 296);
-      }}
-      requestAnimationFrame(step);
-    }}
-    window.addEventListener("keydown", event => {{
-      if (event.key.toLowerCase() === "w") state.player.vy = -7;
-      if (event.key.toLowerCase() === "s") state.player.vy = 7;
-    }});
-    window.addEventListener("keyup", event => {{
-      if (["w", "s"].includes(event.key.toLowerCase())) state.player.vy = 0;
-    }});
-    canvas.addEventListener("mousemove", event => {{
-      const rect = canvas.getBoundingClientRect();
-      const y = (event.clientY - rect.top) * (canvas.height / rect.height);
-      state.player.y = clamp(y - state.player.h / 2, 0, canvas.height - state.player.h);
-    }});
-    document.getElementById("restart").addEventListener("click", restart);
-    restart();
-    step();
-  </script>
-</body>
-</html>
-"""
-
-
 def data_uri_for_file(path, limit_bytes=8_000_000):
     try:
         path = pathlib.Path(path)
@@ -1958,10 +1379,6 @@ def is_app_generation_request(lower):
     return action and artifact
 
 
-def is_code_repair_request(lower):
-    return any(word in lower for word in ["code", "test", "bug", "fix", "patch", "checkout"])
-
-
 def is_gpu_request(lower):
     return any(word in lower for word in ["gpu", "health", "memory", "utilization", "temperature"])
 
@@ -2064,8 +1481,6 @@ def supervisor(payload):
                 image_payload["prompt"] = question
             return image_agent(image_payload)
         return image_followup_agent(question)
-    if is_code_repair_request(lower):
-        return coding_agent(apply=True)
     if is_gpu_request(lower):
         return gpu_agent()
     if payload.get("image_data") and (not question or is_image_question(lower)):
@@ -2095,18 +1510,16 @@ def supervisor(payload):
         return document_rag_agent(question)
 
     docs = retrieve_docs(question, limit=3)
-    code = workspace_sources(question, limit=3)
     prompt = f"""
 You are Supervisor Agent for a local multi-agent chatbot demo. Choose the best specialist
-and answer in under 100 words. Specialists: Image ID Agent, Coding Agent, RAG Agent, GPU Agent.
+and answer in under 100 words. Specialists: Image ID Agent, Video ID Agent, Document RAG Agent, Coding Agent, GPU Agent.
 Question: {question}
 Local docs: {json.dumps(docs, indent=2)}
-Local code: {json.dumps(code, indent=2)}
 """
     answer = ollama_chat(SUPERVISOR_MODEL, [{"role": "user", "content": prompt}], temperature=0.2, timeout=160)
     steps = [trace("Supervisor", "mcp.router.plan", "Answered with local context")]
     event("Supervisor", "Question answered", question[:120])
-    return {"answer": answer, "steps": steps, "sources": docs + code, "gpu": gpu_stats()}
+    return {"answer": answer, "steps": steps, "sources": docs, "gpu": gpu_stats()}
 
 
 def demo_script():
@@ -2202,8 +1615,6 @@ class Handler(BaseHTTPRequestHandler):
                 self.send_json(video_agent(payload))
             elif parsed.path == "/api/document":
                 self.send_json(document_upload_agent(payload))
-            elif parsed.path == "/api/code":
-                self.send_json(coding_agent(apply=payload.get("apply", True)))
             elif parsed.path == "/api/generate":
                 self.send_json(generate_app_agent(payload.get("prompt", "")))
             elif parsed.path == "/api/rag":
@@ -2290,9 +1701,8 @@ def main():
     parser.add_argument("--host", default="0.0.0.0")
     parser.add_argument("--port", type=int, default=7860)
     args = parser.parse_args()
-    for directory in [DATA_DIR, IMAGE_DIR, VIDEO_DIR, UPLOAD_DIR, REPORT_DIR, DOC_INDEX.parent]:
+    for directory in [DATA_DIR, IMAGE_DIR, VIDEO_DIR, UPLOAD_DIR, GENERATION_DIR, DOC_INDEX.parent]:
         directory.mkdir(parents=True, exist_ok=True)
-    ensure_workspace()
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"Local Multi-Agent Chatbot listening on http://{args.host}:{args.port}")
     print(f"Supervisor={SUPERVISOR_MODEL}; Coding={CODING_MODEL}; Vision={vision_model_label()}; GPU={DEMO_GPU_INDEX}")

@@ -123,8 +123,6 @@ http://<host-ip>:7860
   profile, but it can reserve most of the GPU for long-context KV cache. The
   default demo path uses Cosmos-Reason2-2B to leave room for document RAG and
   briefing generation on the same GPU.
-- The bundled sample repo lives in `demo-workspace/shopflow` and powers the
-  coding-agent path.
 - Generated briefing pages are written to `data/generated/` and copied to
   `~/Desktop/`.
 - Three lightweight matching case-file sets can be generated with
@@ -137,8 +135,6 @@ http://<host-ip>:7860
 - Uploaded videos are sampled locally with `ffmpeg`/`ffprobe`; clips should be
   under five minutes.
 - At the show, models and docs are already local. No model downloads are needed.
-- Reports are written to `reports/`.
-
 ## Briefing Page Prompt Shape
 
 The Coding Agent uses the active local context from Image ID, Video ID, Document
