@@ -101,6 +101,13 @@ To keep it running after closing the terminal:
 ./scripts/run_background.sh
 ```
 
+To stop the demo web app, unload active Ollama model sessions, and stop the
+Cosmos-Reason2 NIM container:
+
+```bash
+./stop.sh
+```
+
 Open:
 
 ```text
