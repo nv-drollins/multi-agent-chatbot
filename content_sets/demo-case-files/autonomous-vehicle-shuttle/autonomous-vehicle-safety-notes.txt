@@ -1,0 +1,8 @@
+Autonomous Vehicle Safety Notes
+===============================
+
+Scenario: autonomous shuttle route 12 near the east campus crosswalk.
+Observation: perception snapshot shows a curb lane object and a pedestrian zone near the planned path.
+Related visual evidence: ego vehicle is centered in lane, the crosswalk marker is visible, and the video shows the vehicle slowing before the object.
+Recommended action: flag the clip for safety review, confirm object classification, compare braking distance against route policy, and verify that the shuttle remains outside the pedestrian zone.
+Success criteria: object is tracked for at least three frames, speed reduction is smooth, and the post event review includes scene summary plus next action owner.

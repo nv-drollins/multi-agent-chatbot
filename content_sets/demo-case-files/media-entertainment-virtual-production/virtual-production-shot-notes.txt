@@ -1,0 +1,8 @@
+Virtual Production Shot Notes
+=============================
+
+Production: Stage B virtual production review for sequence VP-024.
+Observation: LED wall horizon line, camera position, and foreground prop placement need a quick continuity check before final takes.
+Related visual evidence: still frame shows the LED volume, camera marker, and foreground props while the clip shows a short camera pass across the stage.
+Recommended action: verify camera tracking alignment, confirm horizon placement against the shot plan, inspect prop continuity, and publish a briefing for the director and stage supervisor.
+Success criteria: camera marker remains aligned, no visible wall seam is detected, and the shot notes include a clear go or hold recommendation.

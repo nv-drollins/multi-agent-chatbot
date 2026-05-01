@@ -1,0 +1,400 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Neon Paddle Arena</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #0f120f;
+      color: #f2f5ee;
+      font-family: Segoe UI, system-ui, sans-serif;
+    }
+    main {
+      width: min(1120px, 96vw);
+      display: grid;
+      gap: 12px;
+    }
+    header, .hud {
+      display: flex;
+      align-items: end;
+      justify-content: space-between;
+      gap: 12px;
+    }
+    h1 {
+      margin: 0;
+      font-size: 26px;
+      letter-spacing: 0;
+    }
+    p {
+      margin: 4px 0 0;
+      color: #aeb8a8;
+      font-size: 14px;
+    }
+    canvas {
+      width: 100%;
+      aspect-ratio: 16 / 9;
+      display: block;
+      background: #151812;
+      border: 1px solid #3d4638;
+      border-radius: 8px;
+      box-shadow: 0 22px 55px rgba(0, 0, 0, .42);
+    }
+    .hud {
+      color: #aeb8a8;
+      font-size: 14px;
+    }
+    .pill {
+      border: 1px solid #3d4638;
+      border-radius: 6px;
+      padding: 8px 10px;
+      background: #1a1e18;
+      min-width: 120px;
+      text-align: center;
+    }
+    button {
+      min-height: 38px;
+      border: 1px solid #76b900;
+      background: #76b900;
+      color: #10140d;
+      border-radius: 6px;
+      padding: 8px 12px;
+      font: inherit;
+      font-weight: 700;
+      cursor: pointer;
+    }
+    @media (max-width: 720px) {
+      header, .hud { align-items: stretch; flex-direction: column; }
+      .pill { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <div>
+        <h1>Neon Paddle Arena</h1>
+        <p>__PROMPT__</p>
+      </div>
+      <button id="restart">Restart Match</button>
+    </header>
+    <canvas id="game" width="1280" height="720"></canvas>
+    <div class="hud">
+      <span class="pill">W/S or mouse: move</span>
+      <span class="pill" id="score">Player 0 : 0 AI</span>
+      <span class="pill" id="status">Power-ups active</span>
+    </div>
+  </main>
+  <script>
+    const canvas = document.getElementById("game");
+    const ctx = canvas.getContext("2d");
+    const scoreEl = document.getElementById("score");
+    const statusEl = document.getElementById("status");
+    const audio = { ctx: null };
+    const keys = new Set();
+    const colors = {
+      bg: "#151812",
+      grid: "#30382b",
+      green: "#76b900",
+      green2: "#b7f34a",
+      cyan: "#5ed7c7",
+      amber: "#f0b84d",
+      red: "#ff6b61",
+      text: "#f2f5ee"
+    };
+    const variant = {
+      starCount: __STAR_COUNT__,
+      paddleHeight: __PADDLE_HEIGHT__,
+      wideHeight: __WIDE_HEIGHT__,
+      aiSpeed: __AI_SPEED__,
+      powerupRate: __POWERUP_RATE__,
+      maxPowerups: __MAX_POWERUPS__,
+      gridStep: __GRID_STEP__,
+      winScore: __WIN_SCORE__,
+      ballMinSpeed: __BALL_MIN_SPEED__,
+      ballMaxSpeed: __BALL_MAX_SPEED__,
+      startText: "__START_TEXT__"
+    };
+    const state = {
+      mode: "title",
+      playerScore: 0,
+      aiScore: 0,
+      rally: 0,
+      shake: 0,
+      slowMo: 0,
+      balls: [],
+      particles: [],
+      powerups: [],
+      stars: [],
+      player: { x: 54, y: 300, w: 18, h: variant.paddleHeight, vy: 0, shield: 0 },
+      ai: { x: 1208, y: 300, w: 18, h: variant.paddleHeight, shield: 0 }
+    };
+    function rand(min, max) { return min + Math.random() * (max - min); }
+    function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+    function beep(freq, dur, type = "sine", gain = .035) {
+      try {
+        audio.ctx = audio.ctx || new (window.AudioContext || window.webkitAudioContext)();
+        const osc = audio.ctx.createOscillator();
+        const amp = audio.ctx.createGain();
+        osc.type = type;
+        osc.frequency.value = freq;
+        amp.gain.value = gain;
+        osc.connect(amp);
+        amp.connect(audio.ctx.destination);
+        osc.start();
+        amp.gain.exponentialRampToValueAtTime(.0001, audio.ctx.currentTime + dur);
+        osc.stop(audio.ctx.currentTime + dur);
+      } catch (err) {}
+    }
+    function newBall(dir = 1) {
+      return {
+        x: canvas.width / 2,
+        y: canvas.height / 2,
+        r: 10,
+        vx: dir * rand(variant.ballMinSpeed, variant.ballMaxSpeed),
+        vy: rand(-3.8, 3.8),
+        trail: [],
+        hot: 0
+      };
+    }
+    function spawnParticles(x, y, color, count = 18) {
+      for (let i = 0; i < count; i++) {
+        state.particles.push({
+          x, y,
+          vx: rand(-5, 5),
+          vy: rand(-5, 5),
+          life: rand(28, 56),
+          color
+        });
+      }
+    }
+    function spawnPowerup() {
+      const types = ["multiball", "wide", "slow", "blast"];
+      state.powerups.push({
+        x: rand(360, 920),
+        y: rand(120, 600),
+        r: 18,
+        type: types[Math.floor(rand(0, types.length))],
+        phase: rand(0, 10)
+      });
+    }
+    function resetMatch() {
+      state.mode = "title";
+      state.playerScore = 0;
+      state.aiScore = 0;
+      state.rally = 0;
+      state.slowMo = 0;
+      state.balls = [newBall(Math.random() > .5 ? 1 : -1)];
+      state.powerups = [];
+      state.particles = [];
+      state.stars = Array.from({ length: variant.starCount }, () => ({ x: rand(0, 1280), y: rand(0, 720), z: rand(.25, 1.2) }));
+      state.player.y = 297;
+      state.ai.y = 297;
+      state.player.h = variant.paddleHeight;
+      state.ai.h = variant.paddleHeight;
+      statusEl.textContent = variant.startText;
+    }
+    function startGame() {
+      if (state.mode !== "play") {
+        state.mode = "play";
+        beep(420, .08, "square", .03);
+      }
+    }
+    function score(dir) {
+      if (dir > 0) state.playerScore++;
+      else state.aiScore++;
+      state.rally = 0;
+      state.shake = 14;
+      state.balls = [newBall(dir)];
+      spawnParticles(canvas.width / 2, canvas.height / 2, dir > 0 ? colors.green : colors.red, 45);
+      beep(dir > 0 ? 720 : 180, .16, "sawtooth", .045);
+      if (state.playerScore >= variant.winScore || state.aiScore >= variant.winScore) state.mode = "gameover";
+    }
+    function applyPower(type, ball) {
+      if (type === "multiball" && state.balls.length < 4) {
+        state.balls.push(newBall(Math.sign(ball.vx) || 1));
+        state.balls.push(newBall(-Math.sign(ball.vx) || -1));
+      }
+      if (type === "wide") {
+        state.player.h = variant.wideHeight;
+        setTimeout(() => state.player.h = variant.paddleHeight, 5000);
+      }
+      if (type === "slow") state.slowMo = 240;
+      if (type === "blast") ball.hot = 180;
+      statusEl.textContent = type.toUpperCase();
+      beep(980, .07, "triangle", .04);
+    }
+    function update() {
+      if (state.mode !== "play") return;
+      if (keys.has("w") || keys.has("arrowup")) state.player.vy = -9;
+      else if (keys.has("s") || keys.has("arrowdown")) state.player.vy = 9;
+      else state.player.vy *= .72;
+      state.player.y = clamp(state.player.y + state.player.vy, 0, canvas.height - state.player.h);
+      const lead = state.balls.reduce((best, ball) => Math.abs(ball.x - state.ai.x) < Math.abs(best.x - state.ai.x) ? ball : best, state.balls[0]);
+      const target = lead.y - state.ai.h / 2 + Math.sin(Date.now() / 220) * 22;
+      const aiSpeed = variant.aiSpeed + Math.min(state.rally * .12, 3.2);
+      state.ai.y += clamp(target - state.ai.y, -aiSpeed, aiSpeed);
+      state.ai.y = clamp(state.ai.y, 0, canvas.height - state.ai.h);
+      if (state.slowMo > 0) state.slowMo--;
+      if (Math.random() < variant.powerupRate && state.powerups.length < variant.maxPowerups) spawnPowerup();
+      const speedMod = state.slowMo > 0 ? .72 : 1;
+      for (const ball of state.balls) {
+        ball.trail.push({ x: ball.x, y: ball.y });
+        if (ball.trail.length > 16) ball.trail.shift();
+        ball.x += ball.vx * speedMod;
+        ball.y += ball.vy * speedMod;
+        if (ball.hot > 0) ball.hot--;
+        if (ball.y < ball.r || ball.y > canvas.height - ball.r) {
+          ball.vy *= -1;
+          spawnParticles(ball.x, ball.y, colors.cyan, 10);
+          beep(310, .035, "triangle", .02);
+        }
+        for (const paddle of [state.player, state.ai]) {
+          const hit = ball.x + ball.r > paddle.x &&
+            ball.x - ball.r < paddle.x + paddle.w &&
+            ball.y + ball.r > paddle.y &&
+            ball.y - ball.r < paddle.y + paddle.h;
+          if (hit) {
+            const side = paddle === state.player ? 1 : -1;
+            const offset = (ball.y - (paddle.y + paddle.h / 2)) / (paddle.h / 2);
+            ball.vx = side * Math.min(Math.abs(ball.vx) * 1.06 + .18, 17);
+            ball.vy = offset * (7.2 + state.rally * .06);
+            ball.x += side * 12;
+            state.rally++;
+            state.shake = 5;
+            spawnParticles(ball.x, ball.y, paddle === state.player ? colors.green : colors.cyan, 22);
+            beep(440 + state.rally * 10, .045, "square", .026);
+          }
+        }
+        for (const power of state.powerups) {
+          const dx = ball.x - power.x;
+          const dy = ball.y - power.y;
+          if (Math.hypot(dx, dy) < ball.r + power.r) {
+            power.dead = true;
+            applyPower(power.type, ball);
+            spawnParticles(power.x, power.y, colors.amber, 35);
+          }
+        }
+        if (ball.x < -40) score(-1);
+        if (ball.x > canvas.width + 40) score(1);
+      }
+      state.powerups = state.powerups.filter(power => !power.dead);
+      state.particles.forEach(p => { p.x += p.vx; p.y += p.vy; p.vy += .05; p.life--; });
+      state.particles = state.particles.filter(p => p.life > 0);
+      if (state.shake > 0) state.shake--;
+      scoreEl.textContent = `Player ${state.playerScore} : ${state.aiScore} AI`;
+    }
+    function drawPaddle(paddle, color) {
+      ctx.save();
+      ctx.shadowColor = color;
+      ctx.shadowBlur = 18;
+      ctx.fillStyle = color;
+      ctx.fillRect(paddle.x, paddle.y, paddle.w, paddle.h);
+      ctx.fillStyle = "rgba(255,255,255,.28)";
+      ctx.fillRect(paddle.x + 3, paddle.y + 8, 4, paddle.h - 16);
+      ctx.restore();
+    }
+    function draw() {
+      ctx.save();
+      if (state.shake > 0) ctx.translate(rand(-state.shake, state.shake), rand(-state.shake, state.shake));
+      ctx.fillStyle = colors.bg;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      state.stars.forEach(star => {
+        star.x -= star.z * .45;
+        if (star.x < 0) star.x = canvas.width;
+        ctx.fillStyle = `rgba(174,184,168,${.16 + star.z * .22})`;
+        ctx.fillRect(star.x, star.y, star.z * 2, star.z * 2);
+      });
+      ctx.strokeStyle = colors.grid;
+      ctx.lineWidth = 1;
+      for (let x = 0; x < canvas.width; x += variant.gridStep) {
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, canvas.height); ctx.stroke();
+      }
+      for (let y = 0; y < canvas.height; y += variant.gridStep) {
+        ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(canvas.width, y); ctx.stroke();
+      }
+      ctx.strokeStyle = "rgba(118,185,0,.5)";
+      ctx.setLineDash([16, 18]);
+      ctx.beginPath(); ctx.moveTo(canvas.width / 2, 0); ctx.lineTo(canvas.width / 2, canvas.height); ctx.stroke();
+      ctx.setLineDash([]);
+      drawPaddle(state.player, colors.green);
+      drawPaddle(state.ai, colors.cyan);
+      for (const power of state.powerups) {
+        power.phase += .05;
+        ctx.save();
+        ctx.translate(power.x, power.y);
+        ctx.rotate(power.phase);
+        ctx.strokeStyle = colors.amber;
+        ctx.fillStyle = "rgba(240,184,77,.18)";
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(0, 0, power.r + Math.sin(power.phase) * 3, 0, Math.PI * 2);
+        ctx.fill(); ctx.stroke();
+        ctx.fillStyle = colors.amber;
+        ctx.font = "700 13px Segoe UI";
+        ctx.textAlign = "center";
+        ctx.fillText(power.type[0].toUpperCase(), 0, 5);
+        ctx.restore();
+      }
+      for (const ball of state.balls) {
+        ball.trail.forEach((p, i) => {
+          ctx.fillStyle = `rgba(118,185,0,${i / ball.trail.length * .25})`;
+          ctx.beginPath(); ctx.arc(p.x, p.y, ball.r * (i / ball.trail.length), 0, Math.PI * 2); ctx.fill();
+        });
+        ctx.save();
+        ctx.shadowColor = ball.hot > 0 ? colors.amber : colors.green2;
+        ctx.shadowBlur = ball.hot > 0 ? 26 : 16;
+        ctx.fillStyle = ball.hot > 0 ? colors.amber : colors.text;
+        ctx.beginPath(); ctx.arc(ball.x, ball.y, ball.r, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      }
+      state.particles.forEach(p => {
+        ctx.globalAlpha = clamp(p.life / 44, 0, 1);
+        ctx.fillStyle = p.color;
+        ctx.fillRect(p.x, p.y, 4, 4);
+        ctx.globalAlpha = 1;
+      });
+      ctx.fillStyle = "rgba(242,245,238,.9)";
+      ctx.font = "700 54px Segoe UI";
+      ctx.textAlign = "center";
+      ctx.fillText(`${state.playerScore}   ${state.aiScore}`, canvas.width / 2, 78);
+      if (state.mode === "title" || state.mode === "gameover") {
+        ctx.fillStyle = "rgba(16,18,15,.78)";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = colors.text;
+        ctx.font = "800 52px Segoe UI";
+        ctx.fillText(state.mode === "gameover" ? (state.playerScore > state.aiScore ? "You Win" : "AI Wins") : "Neon Paddle Arena", canvas.width / 2, 304);
+        ctx.font = "20px Segoe UI";
+        ctx.fillStyle = "#aeb8a8";
+        ctx.fillText(variant.startText + " or move the mouse", canvas.width / 2, 348);
+      }
+      ctx.restore();
+    }
+    function frame() {
+      update();
+      draw();
+      requestAnimationFrame(frame);
+    }
+    window.addEventListener("keydown", e => {
+      keys.add(e.key.toLowerCase());
+      if (e.code === "Space") startGame();
+    });
+    window.addEventListener("keyup", e => keys.delete(e.key.toLowerCase()));
+    canvas.addEventListener("mousemove", e => {
+      const rect = canvas.getBoundingClientRect();
+      const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+      state.player.y = clamp(y - state.player.h / 2, 0, canvas.height - state.player.h);
+      startGame();
+    });
+    canvas.addEventListener("click", startGame);
+    document.getElementById("restart").addEventListener("click", resetMatch);
+    resetMatch();
+    frame();
+  </script>
+</body>
+</html>

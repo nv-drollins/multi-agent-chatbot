@@ -1,0 +1,8 @@
+Manufacturing Quality Checklist
+===============================
+
+Cell: robotic inspection station QI-7 on Line 3.
+Observation: one amber part was flagged after the camera station measured a surface mark outside tolerance.
+Related visual evidence: conveyor shows mixed part status, the robot arm is active, and the defect marker appears near the inspection zone.
+Recommended action: quarantine the flagged part, inspect camera calibration, check the last twenty parts from the same fixture, and update the quality ticket with the image and clip.
+Success criteria: flagged part is removed, camera confidence returns above 95 percent, and the next ten inspected parts pass without amber status.

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Local Multi-Agent Chatbot</title>
+  <link rel="icon" href="/favicon.ico">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <header class="topbar">
+    <div>
+      <h1>Local Multi-Agent Chatbot</h1>
+      <p>Supervisor, image ID, video ID, document RAG, coding agent, and GPU telemetry</p>
+    </div>
+    <div class="status-strip">
+      <span id="gpuScope">GPU</span>
+      <span id="supervisorChip" class="model-chip" data-role="supervisor">Supervisor</span>
+      <span id="visionChip" class="model-chip" data-role="vision">Vision</span>
+      <span id="documentChip" class="model-chip" data-role="document">Document</span>
+      <span id="appChip" class="model-chip" data-role="app">Coding Agent</span>
+      <span id="embedChip" class="model-chip" data-role="embedding">Embeddings</span>
+      <span id="docStatus">Docs</span>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="panel left-panel">
+      <h2>Image ID Agent</h2>
+      <input id="imageFile" type="file" accept="image/*">
+      <img id="preview" alt="">
+      <button id="imageBtn" class="primary">Identify Image</button>
+
+      <h2>Video ID Agent</h2>
+      <input id="videoFile" type="file" accept="video/*">
+      <video id="videoPreview" controls></video>
+      <button id="videoBtn" class="primary">Summarize Video</button>
+
+      <h2>Document RAG Agent</h2>
+      <input id="docFile" type="file" accept=".pdf,.txt,.md,text/plain,application/pdf" multiple>
+      <button id="docBtn" class="primary">Index Document</button>
+      <div id="docContext" class="context-note">No uploaded document</div>
+
+      <h2>Briefing Page Builder</h2>
+      <textarea id="appPrompt" autocomplete="off" rows="5">Build a local briefing page from the active image, video, and document context. Include evidence, upload stats, GPU telemetry, and suggested next actions.</textarea>
+      <button id="generateBtn" class="primary">Build Briefing Page</button>
+
+      <button id="resetBtn">Reset demo</button>
+    </section>
+
+    <section class="panel center-panel">
+      <div class="panel-head">
+        <h2>Supervisor Chat</h2>
+        <span id="runState" class="subtle">Ready</span>
+      </div>
+      <div id="answer" class="answer">
+        <p class="subtle">Upload an image or ask the supervisor to route work to a specialist.</p>
+      </div>
+      <div class="context-toggle" aria-label="Chat context">
+        <label><input type="radio" name="contextMode" value="image" checked> Image</label>
+        <label><input type="radio" name="contextMode" value="video"> Video</label>
+        <label><input type="radio" name="contextMode" value="document"> Document</label>
+      </div>
+      <form id="chatForm" class="chat-form">
+        <input id="question" autocomplete="off" placeholder="Ask about uploaded content, or build a local briefing page">
+        <button class="primary">Ask</button>
+      </form>
+
+      <div class="panel-head">
+        <h2>MCP Tool Bus</h2>
+        <span class="subtle">local tools</span>
+      </div>
+      <div id="trace" class="trace"></div>
+
+      <div class="panel-head">
+        <h2>Terminal / Artifact</h2>
+        <span class="subtle">coding agent</span>
+      </div>
+      <pre id="terminal" class="terminal"></pre>
+    </section>
+
+    <section class="panel right-panel">
+      <h2>GPU Telemetry</h2>
+      <div class="meter-grid" id="gpuMeters"></div>
+
+      <div class="panel-head">
+        <h2>Sources</h2>
+        <span id="sourceCount" class="subtle">0</span>
+      </div>
+      <div id="sources" class="sources"></div>
+
+      <h2>Agent Timeline</h2>
+      <div id="timeline" class="timeline"></div>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

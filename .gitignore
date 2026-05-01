@@ -1,0 +1,14 @@
+.run/
+.venv/
+__pycache__/
+*.py[cod]
+
+# Runtime demo state
+data/
+reports/
+demo-workspace/
+
+# Local/editor noise
+.DS_Store
+Thumbs.db
+*.log
