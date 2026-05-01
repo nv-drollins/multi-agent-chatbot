@@ -33,6 +33,57 @@ on multi-GPU systems.
 
 Override these with `SUPERVISOR_MODEL`, `CODING_MODEL`, `VISION_PROVIDER`, `COSMOS_NIM_BASE`, `COSMOS_MODEL`, `VISION_MODEL`, and `EMBED_MODEL`.
 
+## Prerequisites
+
+Validated on Ubuntu 24.04 with one NVIDIA RTX PRO 6000 Blackwell Max-Q GPU.
+The demo should also be portable to other NVIDIA workstation-class GPUs with
+enough memory for the selected local models.
+
+System software:
+
+- NVIDIA GPU driver with `nvidia-smi` working. The clean deployment test used
+  driver `595.58.03`.
+- Docker with the NVIDIA Container Toolkit configured.
+- Docker runnable by the demo user without `sudo`.
+- Ollama installed and listening on the standard local endpoint
+  `127.0.0.1:11434`.
+- Git access to this repository. If the repository is private, authenticate
+  GitHub on the target machine before cloning or deploy from a local archive.
+- Python 3 with venv support, ffmpeg, fontconfig, and DejaVu fonts.
+
+Ubuntu package baseline:
+
+```bash
+sudo apt update
+sudo apt install -y git curl ca-certificates python3 python3-venv python3-pip ffmpeg fontconfig fonts-dejavu-core jq
+```
+
+Required API keys for first-time model setup:
+
+- `NGC_API_KEY` for the Cosmos-Reason2 NIM container and model assets.
+- `NVIDIA_API_KEY`, `HF_TOKEN`, and `OLLAMA_API_KEY` are useful for related
+  model access workflows and future variants.
+
+The NIM startup script can read standard export lines from `~/.bashrc`, for
+example:
+
+```bash
+export NGC_API_KEY="..."
+export NVIDIA_API_KEY="..."
+export HF_TOKEN="..."
+export OLLAMA_API_KEY="..."
+```
+
+First-time downloads include Ollama LLMs, the optional Ollama backup VLM, the
+Cosmos-Reason2 NIM image/model cache, and local NVIDIA PDF docs. Plan for at
+least 100 GB of free disk; 200 GB is more comfortable for repeated testing.
+
+Ports:
+
+- `7860`: demo web UI, should be reachable from the presenter browser.
+- `11434`: Ollama, can remain local-only.
+- `8000`: Cosmos-Reason2 NIM OpenAI-compatible endpoint, can remain local-only.
+
 ## Quick Start
 
 ```bash
@@ -58,6 +109,9 @@ http://<host-ip>:7860
 
 ## Notes
 
+- A clean Ubuntu deployment test on May 1, 2026 used Ubuntu 24.04.4 LTS,
+  NVIDIA driver 595.58.03, Docker 29.4.2, Ollama 0.22.1, and one RTX PRO 6000
+  Blackwell Max-Q.
 - The demo uses the standard local Ollama endpoint `127.0.0.1:11434` by
   default. Override it with `OLLAMA_HOST` if you need a different port.
 - If `start.sh` needs to launch Ollama itself, it sets `CUDA_VISIBLE_DEVICES=0`
