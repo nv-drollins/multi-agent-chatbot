@@ -42,7 +42,7 @@ CURATED = [
 
 
 def normalize_ollama_host(value: str) -> str:
-    value = value or "127.0.0.1:11445"
+    value = value or "127.0.0.1:11434"
     if value.startswith("http://") or value.startswith("https://"):
         return value.rstrip("/")
     return f"http://{value.rstrip('/')}"

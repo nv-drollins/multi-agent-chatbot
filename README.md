@@ -1,6 +1,6 @@
 # Local Multi-Agent Chatbot
 
-Local autonomous AI demo for NVIDIA RTX PRO 6000 and DGX Spark class systems.
+Local multi-agent AI demo for NVIDIA RTX PRO and DGX Spark class systems.
 
 The demo runs inference locally through Ollama plus an optional local NVIDIA NIM
 for Cosmos-Reason2. It uses one GPU by default (`CUDA_VISIBLE_DEVICES=0`) even
@@ -36,7 +36,8 @@ Override these with `SUPERVISOR_MODEL`, `CODING_MODEL`, `VISION_PROVIDER`, `COSM
 ## Quick Start
 
 ```bash
-cd ~/autonomous-demo-ops-agent
+git clone https://github.com/<owner>/multi-agent-chatbot.git
+cd multi-agent-chatbot
 bash scripts/start_cosmos_nim.sh
 ./scripts/download_docs.sh
 ./scripts/prepare_models.sh
@@ -55,17 +56,12 @@ Open:
 http://<host-ip>:7860
 ```
 
-For the current workstation:
-
-```text
-http://192.168.1.141:7860
-```
-
 ## Notes
 
-- `start.sh` starts a demo-scoped Ollama server on `127.0.0.1:11445` with
-  `CUDA_VISIBLE_DEVICES=0`, leaving the system Ollama service on port `11434`
-  untouched.
+- The demo uses the standard local Ollama endpoint `127.0.0.1:11434` by
+  default. Override it with `OLLAMA_HOST` if you need a different port.
+- If `start.sh` needs to launch Ollama itself, it sets `CUDA_VISIBLE_DEVICES=0`
+  by default so model inference uses one GPU.
 - If the Cosmos-Reason2 NIM is running at `COSMOS_NIM_BASE`, image and video
   agents use it first. If the NIM is not available, the demo still runs with the
   existing local Ollama VLM.

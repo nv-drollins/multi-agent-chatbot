@@ -54,7 +54,7 @@ INVENTORY_BUCKETS = {
 
 STATE_LOCK = threading.Lock()
 
-OLLAMA_BASE = os.environ.get("OLLAMA_HOST", "127.0.0.1:11445")
+OLLAMA_BASE = os.environ.get("OLLAMA_HOST", "127.0.0.1:11434")
 if not OLLAMA_BASE.startswith(("http://", "https://")):
     OLLAMA_BASE = f"http://{OLLAMA_BASE}"
 OLLAMA_BASE = OLLAMA_BASE.rstrip("/")

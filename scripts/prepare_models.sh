@@ -6,7 +6,11 @@ cd "$ROOT_DIR"
 
 export DEMO_GPU_INDEX="${DEMO_GPU_INDEX:-0}"
 export CUDA_VISIBLE_DEVICES="${CUDA_VISIBLE_DEVICES:-$DEMO_GPU_INDEX}"
-export OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11445}"
+export OLLAMA_HOST="${OLLAMA_HOST:-127.0.0.1:11434}"
+OLLAMA_URL="$OLLAMA_HOST"
+if [[ "$OLLAMA_URL" != http://* && "$OLLAMA_URL" != https://* ]]; then
+  OLLAMA_URL="http://${OLLAMA_URL}"
+fi
 export OLLAMA_MODELS="${OLLAMA_MODELS:-$HOME/.ollama/models}"
 export SUPERVISOR_MODEL="${SUPERVISOR_MODEL:-qwen3:14b}"
 export CODING_MODEL="${CODING_MODEL:-qwen2.5-coder:7b}"
@@ -15,7 +19,7 @@ export EMBED_MODEL="${EMBED_MODEL:-nomic-embed-text}"
 
 mkdir -p .run
 
-if ! curl -fsS "http://${OLLAMA_HOST}/api/tags" >/dev/null 2>&1; then
+if ! curl -fsS "${OLLAMA_URL}/api/tags" >/dev/null 2>&1; then
   echo "Starting temporary Ollama on GPU ${CUDA_VISIBLE_DEVICES} at ${OLLAMA_HOST}"
   nohup env CUDA_VISIBLE_DEVICES="$CUDA_VISIBLE_DEVICES" \
     OLLAMA_HOST="$OLLAMA_HOST" \
@@ -23,7 +27,7 @@ if ! curl -fsS "http://${OLLAMA_HOST}/api/tags" >/dev/null 2>&1; then
     ollama serve > .run/ollama.log 2>&1 &
   echo "$!" > .run/ollama.pid
   for _ in $(seq 1 90); do
-    curl -fsS "http://${OLLAMA_HOST}/api/tags" >/dev/null 2>&1 && break
+    curl -fsS "${OLLAMA_URL}/api/tags" >/dev/null 2>&1 && break
     sleep 1
   done
 fi
