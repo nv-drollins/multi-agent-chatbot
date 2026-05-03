@@ -7,6 +7,7 @@ cd "$ROOT_DIR"
 PORT="${PORT:-7860}"
 COSMOS_MODEL="${COSMOS_MODEL:-nvidia/cosmos-reason2-2b}"
 COSMOS_CONTAINER="${COSMOS_NIM_CONTAINER:-${COSMOS_MODEL##*/}}"
+COSMOS_CONTAINERS=("$COSMOS_CONTAINER" "cosmos-reason2-2b" "cosmos-reason2-8b")
 
 stop_pid_file() {
   local file="$1"
@@ -54,10 +55,18 @@ fi
 stop_pid_file .run/ollama.pid "demo-scoped Ollama"
 
 if command -v docker >/dev/null 2>&1; then
-  if docker ps -a --format "{{.Names}}" | grep -qx "$COSMOS_CONTAINER"; then
-    docker rm -f "$COSMOS_CONTAINER" >/dev/null 2>&1 || true
-    echo "Stopped NIM container: $COSMOS_CONTAINER"
-  fi
+  stopped_containers=""
+  for container in "${COSMOS_CONTAINERS[@]}"; do
+    [ -n "$container" ] || continue
+    case " $stopped_containers " in
+      *" $container "*) continue ;;
+    esac
+    stopped_containers="$stopped_containers $container"
+    if docker ps -a --format "{{.Names}}" | grep -qx "$container"; then
+      docker rm -f "$container" >/dev/null 2>&1 || true
+      echo "Stopped NIM container: $container"
+    fi
+  done
 fi
 
 echo "Stopped demo app, local model sessions, and NIM container."

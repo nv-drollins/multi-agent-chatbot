@@ -101,6 +101,18 @@ To keep it running after closing the terminal:
 ./scripts/run_background.sh
 ```
 
+After the first install, use the restart helper during an event. It stops any
+leftover demo processes, starts the Cosmos-Reason2 NIM from the local Docker/NIM
+cache, and starts the web app in the background:
+
+```bash
+# RTX PRO 6000 profile, conservative 2B vision NIM
+./restart.sh rtx
+
+# DGX Spark / GB10 profile, higher-quality 8B vision NIM
+./restart.sh gb10
+```
+
 To stop the demo web app, unload active Ollama model sessions, and stop the
 Cosmos-Reason2 NIM container:
 
@@ -142,6 +154,39 @@ http://<host-ip>:7860
 - Uploaded videos are sampled locally with `ffmpeg`/`ffprobe`; clips should be
   under five minutes.
 - At the show, models and docs are already local. No model downloads are needed.
+
+## Event Restart Loop
+
+Use this loop after the machine has already been prepared with
+`scripts/download_docs.sh`, `scripts/prepare_models.sh`, and the first NIM start.
+
+Start or restart on RTX PRO:
+
+```bash
+cd multi-agent-chatbot
+./restart.sh rtx
+```
+
+Start or restart on DGX Spark / GB10:
+
+```bash
+cd multi-agent-chatbot
+./restart.sh gb10
+```
+
+Stop between demos or at the end of the day:
+
+```bash
+./stop.sh
+```
+
+Useful logs:
+
+- Web app and startup log: `.run/server.log`
+- Demo-started Ollama log, if `start.sh` had to launch Ollama: `.run/ollama.log`
+- Cosmos NIM container log while running:
+  `docker logs cosmos-reason2-2b` or `docker logs cosmos-reason2-8b`
+
 ## Briefing Page Prompt Shape
 
 The Coding Agent uses the active local context from Image ID, Video ID, Document
