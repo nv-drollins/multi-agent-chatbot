@@ -87,7 +87,7 @@ Ports:
 ## Quick Start
 
 ```bash
-git clone https://github.com/<owner>/multi-agent-chatbot.git
+git clone https://github.com/nv-drollins/multi-agent-chatbot.git
 cd multi-agent-chatbot
 bash scripts/start_cosmos_nim.sh
 ./scripts/download_docs.sh
