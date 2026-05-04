@@ -26,12 +26,52 @@ NIM_MAX_MODEL_LEN="${NIM_MAX_MODEL_LEN:-8192}"
 NIM_GPU_MEMORY_UTILIZATION="${NIM_GPU_MEMORY_UTILIZATION:-0.35}"
 NIM_MAX_NUM_SEQS="${NIM_MAX_NUM_SEQS:-8}"
 NIM_DISABLE_CUDA_GRAPH="${NIM_DISABLE_CUDA_GRAPH:-true}"
+READY_TIMEOUT_SECONDS="${COSMOS_NIM_READY_TIMEOUT_SECONDS:-1200}"
+READY_POLL_SECONDS="${COSMOS_NIM_READY_POLL_SECONDS:-5}"
+READY_LOG_PATTERN="${COSMOS_NIM_READY_LOG_PATTERN:-Uvicorn running on http://0.0.0.0:8000}"
 
 mkdir -p "$LOCAL_NIM_CACHE"
 chmod -R a+w "$LOCAL_NIM_CACHE"
 
+wait_for_nim_ready() {
+  local start_ts
+  local elapsed
+
+  start_ts="$(date +%s)"
+  echo "Waiting for Cosmos NIM to become ready on http://127.0.0.1:$PORT/v1 ..."
+
+  while true; do
+    if curl -fsS "http://127.0.0.1:$PORT/v1/models" >/dev/null 2>&1; then
+      echo "Cosmos NIM is ready: http://127.0.0.1:$PORT/v1"
+      return 0
+    fi
+
+    if docker logs "$CONTAINER_NAME" 2>&1 | grep -Fq "$READY_LOG_PATTERN"; then
+      echo "Cosmos NIM is ready: found readiness line in container logs."
+      return 0
+    fi
+
+    if ! docker ps --format "{{.Names}}" | grep -qx "$CONTAINER_NAME"; then
+      echo "Cosmos NIM container exited before it became ready." >&2
+      docker logs --tail 80 "$CONTAINER_NAME" 2>&1 || true
+      return 1
+    fi
+
+    elapsed=$(($(date +%s) - start_ts))
+    if [ "$elapsed" -ge "$READY_TIMEOUT_SECONDS" ]; then
+      echo "Timed out waiting for Cosmos NIM after ${READY_TIMEOUT_SECONDS}s." >&2
+      docker logs --tail 80 "$CONTAINER_NAME" 2>&1 || true
+      return 1
+    fi
+
+    echo "Still waiting for Cosmos NIM to become ready... ${elapsed}s elapsed"
+    sleep "$READY_POLL_SECONDS"
+  done
+}
+
 if docker ps --format "{{.Names}}" | grep -qx "$CONTAINER_NAME"; then
   echo "$CONTAINER_NAME is already running"
+  wait_for_nim_ready
   exit 0
 fi
 
@@ -57,3 +97,4 @@ docker run -d \
   "$IMAGE"
 
 echo "$CONTAINER_NAME starting $COSMOS_MODEL on GPU $GPU_DEVICE at http://127.0.0.1:$PORT/v1"
+wait_for_nim_ready

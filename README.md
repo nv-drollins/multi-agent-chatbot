@@ -138,6 +138,10 @@ http://<host-ip>:7860
 - If the Cosmos-Reason2 NIM is running at `COSMOS_NIM_BASE`, image and video
   agents use it first. If the NIM is not available, the demo still runs with the
   existing local Ollama VLM.
+- `scripts/start_cosmos_nim.sh` waits for the NIM to become ready before it
+  returns. It checks `http://127.0.0.1:8000/v1/models` and the container log
+  line `Uvicorn running on http://0.0.0.0:8000`, with a default 20-minute
+  timeout. Override with `COSMOS_NIM_READY_TIMEOUT_SECONDS` if needed.
 - Cosmos-Reason2-8B works on this RTX PRO 6000 and the NIM selected an NVFP4
   profile, but it can reserve most of the GPU for long-context KV cache. The
   default demo path uses Cosmos-Reason2-2B to leave room for document RAG and
@@ -186,6 +190,14 @@ Useful logs:
 - Demo-started Ollama log, if `start.sh` had to launch Ollama: `.run/ollama.log`
 - Cosmos NIM container log while running:
   `docker logs cosmos-reason2-2b` or `docker logs cosmos-reason2-8b`
+
+If restart appears slow, the NIM is usually still loading weights and starting
+the OpenAI-compatible server. The restart helper waits until the NIM readiness
+endpoint responds or the container logs show:
+
+```text
+Uvicorn running on http://0.0.0.0:8000
+```
 
 ## Briefing Page Prompt Shape
 
