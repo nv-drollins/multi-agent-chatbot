@@ -45,8 +45,7 @@ System software:
   driver `595.58.03`.
 - Docker with the NVIDIA Container Toolkit configured.
 - Docker runnable by the demo user without `sudo`.
-- Ollama installed and listening on the standard local endpoint
-  `127.0.0.1:11434`.
+- Ollama installed and reachable on port `11434`.
 - Git access to this repository. If the repository is private, authenticate
   GitHub on the target machine before cloning or deploy from a local archive.
 - Python 3 with venv support, ffmpeg, fontconfig, and DejaVu fonts.
@@ -57,6 +56,51 @@ Ubuntu package baseline:
 sudo apt update
 sudo apt install -y git curl ca-certificates python3 python3-venv python3-pip ffmpeg fontconfig fonts-dejavu-core jq
 ```
+
+### Install and expose Ollama
+
+Install Ollama on the host:
+
+```bash
+curl -fsSL https://ollama.com/install.sh | sh
+```
+
+Configure Ollama to listen on all interfaces. The multi-agent chatbot runs on
+the host and can use `127.0.0.1:11434`, but this setting also makes the same
+Ollama service reachable by local containers, sandboxes, and related demos:
+
+```bash
+sudo mkdir -p /etc/systemd/system/ollama.service.d
+printf '[Service]\nEnvironment="OLLAMA_HOST=0.0.0.0"\n' | sudo tee /etc/systemd/system/ollama.service.d/override.conf
+sudo systemctl daemon-reload
+sudo systemctl restart ollama
+```
+
+Verify it is running:
+
+```bash
+curl http://0.0.0.0:11434
+```
+
+Expected response:
+
+```text
+Ollama is running
+```
+
+If it is not running, start it with:
+
+```bash
+sudo systemctl start ollama
+```
+
+Always start Ollama via systemd, for example with
+`sudo systemctl restart ollama`. Do not use `ollama serve &` for this setup,
+because a manually started process does not pick up the systemd
+`OLLAMA_HOST=0.0.0.0` override.
+
+Only expose port `11434` on networks you trust. If you use a host firewall,
+keep the port closed to untrusted machines.
 
 Required API keys for first-time model setup:
 
