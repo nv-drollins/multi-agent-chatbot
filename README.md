@@ -57,6 +57,22 @@ sudo apt update
 sudo apt install -y git curl ca-certificates python3 python3-venv python3-pip ffmpeg fontconfig fonts-dejavu-core jq
 ```
 
+### Configure Docker GPU runtime
+
+DGX Spark systems may include the NVIDIA Container Toolkit out of the box, but
+Docker still needs the NVIDIA runtime configured:
+
+```bash
+sudo nvidia-ctk runtime configure --runtime=docker
+sudo systemctl restart docker
+```
+
+Optional verification:
+
+```bash
+sudo docker run --rm --runtime=nvidia --gpus all ubuntu nvidia-smi
+```
+
 ### Install and expose Ollama
 
 Install Ollama on the host. **Important for DGX Spark / GB10: pin Ollama to
