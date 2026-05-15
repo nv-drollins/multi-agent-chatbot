@@ -6,6 +6,14 @@ The demo runs inference locally through Ollama plus an optional local NVIDIA NIM
 for Cosmos-Reason2. It uses one GPU by default (`CUDA_VISIBLE_DEVICES=0`) even
 on multi-GPU systems.
 
+## Sudo Prompts
+
+First-time setup may need sudo for host packages, Docker/NVIDIA toolkit configuration, or setup preflight checks. Passwordless sudo is not required, but install commands must run from an interactive terminal so sudo can prompt. When installing over SSH, use:
+
+```bash
+ssh -t nvidia@<spark-ip>
+```
+
 ## What It Shows
 
 - A supervisor routing work to specialist local agents.
